@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Glen Park Garden Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Cpath d='M12 28H48L44 54Q43 57 40 57H20Q17 57 16 54Z' fill='%23E9A2AE'/%3E%3Crect x='9' y='23' width='42' height='8' rx='4' fill='%23F2BDC6'/%3E%3Cpath d='M30 25V12' stroke='%236FA86B' stroke-width='3'/%3E%3Cellipse cx='21' cy='12' rx='8.5' ry='4.6' fill='%236FA86B'/%3E%3Cellipse cx='39' cy='12' rx='8.5' ry='4.6' fill='%236FA86B'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: a soft header band with the two cats, then "Water today" beside "Add a plant", then every plant as a card. */
+:root{
+  --bg:#FBEFF2; --dot:#F4DCE3; --surface:#FFFAFB; --ink:#2F3A32; --muted:#6B7A6C; --line:#EFCBD5;
+  --pink:#E07A98; --pink-soft:#F7D3DD; --green:#4F8A55; --green-soft:#DCEBD6; --leaf:#6FA86B;
+  --pot:#E9A2AE; --pot-rim:#F2BDC6; --ok:#4F8A55; --warn:#C98A1E; --warn-soft:#FBEBC8; --bad:#C8496A; --bad-soft:#F9D6DF;
+  --shadow:0 2px 0 rgba(160,90,110,.12),0 8px 24px rgba(160,90,110,.08); --sky:#5B9BD5; --sky-soft:#E3F0FA; --wet:#BFDCCF; --shoulder:#F6D3DD; --dry:#F3E2A9;
+  --f-display:"Fredoka","Nunito",ui-rounded,system-ui,sans-serif; --f-body:"Nunito",ui-rounded,system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#271F23; --dot:#30262B; --surface:#33292E; --ink:#F6E9ED; --muted:#C2AEB5; --line:#4E3C44;
+  --pink:#F29CB6; --pink-soft:#4A3039; --green:#93C98E; --green-soft:#2F3D2F; --leaf:#86BE80;
+  --pot:#D98E9B; --pot-rim:#E7AAB5; --ok:#93C98E; --warn:#E8B85A; --warn-soft:#46391F; --bad:#F08FA8; --bad-soft:#4B2832;
+  --shadow:0 2px 0 rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.25); --sky:#8EC5F0; --sky-soft:#253747; --wet:#2F4A40; --shoulder:#4E3039; --dry:#4D4426; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#271F23; --dot:#30262B; --surface:#33292E; --ink:#F6E9ED; --muted:#C2AEB5; --line:#4E3C44;
+  --pink:#F29CB6; --pink-soft:#4A3039; --green:#93C98E; --green-soft:#2F3D2F; --leaf:#86BE80;
+  --pot:#D98E9B; --pot-rim:#E7AAB5; --ok:#93C98E; --warn:#E8B85A; --warn-soft:#46391F; --bad:#F08FA8; --bad-soft:#4B2832;
+  --shadow:0 2px 0 rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.25); --sky:#8EC5F0; --sky-soft:#253747; --wet:#2F4A40; --shoulder:#4E3039; --dry:#4D4426; color-scheme:dark}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);background-image:radial-gradient(var(--dot) 1.2px,transparent 1.2px);background-size:22px 22px;color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;text-wrap:balance;margin:0;line-height:1.2}
+h2{font-size:1.3rem}
+.muted{color:var(--muted)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--pink);outline-offset:2px;border-radius:8px}
+
+/* header */
+.head{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--surface);border:2px solid var(--line);border-radius:28px;padding:16px 22px;box-shadow:var(--shadow)}
+.cats{width:150px;height:auto;flex:none;image-rendering:pixelated}
+.head-text{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:4px}
+.head h1{font-size:clamp(1.6rem,3.4vw,2.3rem);color:var(--green)}
+.head h1 span{color:var(--pink)}
+.summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;background:var(--green-soft);font-size:.86rem;font-weight:700;color:var(--ink)}
+.chip.pinkc{background:var(--pink-soft)}
+.chip b{font-variant-numeric:tabular-nums}
+.status-line{font-size:.85rem;color:var(--muted)}
+
+/* layout */
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* rows */
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:18px;background:var(--bg);flex-wrap:wrap}
+.row .pot{width:52px;height:52px;flex:none}
+.row .grow{flex:1 1 140px;min-width:0}
+.row .name{font-weight:700}
+.row .sub{font-size:.84rem;color:var(--muted)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;font-weight:700;white-space:nowrap}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.ok{background:var(--green-soft);color:var(--ok)}
+.btn{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-weight:700;cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--pink)}
+.btn.primary{background:var(--green);border-color:var(--green);color:var(--surface)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.pinkb{background:var(--pink);border-color:var(--pink);color:var(--surface)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.empty{padding:18px;border-radius:18px;background:var(--bg);text-align:center;color:var(--muted)}
+.allgood{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:var(--green-soft)}
+.allgood .pot{width:52px;height:52px;flex:none}
+
+/* form */
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form .full{grid-column:1/-1}
+@media (max-width:420px){.form{grid-template-columns:1fr}}
+.f{display:flex;flex-direction:column;gap:4px;font-size:.84rem;font-weight:700;color:var(--muted);min-width:0}
+.f input,.f select,.f textarea{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 10px;font-weight:400;color:var(--ink);width:100%}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--pink);outline:none}
+.hint{font-size:.78rem;font-weight:400;color:var(--muted)}
+
+/* plant cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card-top{display:flex;gap:10px;align-items:center}
+.card-top .pot{width:56px;height:56px;flex:none}
+.card h3{font-size:1.08rem}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:.86rem;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.notes{font-size:.86rem;margin:0;overflow-wrap:anywhere}
+.dots{display:flex;gap:4px;align-items:center;font-size:.75rem;color:var(--muted)}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--line);display:inline-block}
+.dots i.on{background:var(--leaf)}
+
+/* week strip */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:var(--bg);border-radius:14px;padding:6px 4px;text-align:center;font-size:.78rem;color:var(--muted)}
+.day b{display:block;font-size:1.05rem;color:var(--ink);font-variant-numeric:tabular-nums}
+.day.today{outline:2px solid var(--pink)}
+.drops{color:var(--green);font-weight:700}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:999px;font-weight:700;box-shadow:var(--shadow);z-index:10;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:no-preference){.cats .heart{animation:bob 3s ease-in-out infinite}}
+@keyframes swish{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+/* weather */
+.wx{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.wxd{background:var(--bg);border-radius:14px;padding:8px 4px;text-align:center;font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+.wxd.today{outline:2px solid var(--pink)}
+.wxd svg{width:30px;height:30px}
+.wxd b{color:var(--ink);font-variant-numeric:tabular-nums}
+.wxd .rain{color:var(--sky);font-weight:700;font-variant-numeric:tabular-nums}
+.wxnote{font-size:.84rem;color:var(--muted);margin:0}
+.season{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:14px 12px 12px;box-shadow:var(--shadow)}
+.strip{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.strip div{padding:6px 0;text-align:center;font-size:.72rem;font-weight:700;border-radius:999px;position:relative;color:var(--ink)}
+.strip .wet{background:var(--wet)}.strip .dry{background:var(--dry)}.strip .shoulder{background:var(--shoulder)}
+.strip .now{outline:2.5px solid var(--pink);outline-offset:1px}
+.strip .now::after{content:"♡";position:absolute;top:-15px;left:50%;transform:translateX(-50%);color:var(--pink);font-size:.8rem}
+.season-line{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.9rem;padding:0 4px}
+@media (max-width:480px){.strip div{font-size:.6rem}}
+.banner{background:var(--warn-soft);border-radius:16px;padding:10px 14px;font-size:.88rem}
+@media (max-width:520px){.cell{min-height:48px;padding:4px}.wxd svg{width:24px;height:24px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="head">
+    <svg class="cats" viewBox="0 0 128 62" role="img" aria-label="Two little white pixel cats: a fluffy one and a short-haired one" shape-rendering="crispEdges">
+      <svg x="0" y="0" width="62" height="62" viewBox="0 0 60 60"><rect x="11.25" y="5.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="5.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="8.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="39.38" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="8.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="11.25" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="14.38" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="20.63" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="23.75" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="26.88" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="30.00" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="33.13" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="36.25" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="39.38" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="11.25" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="45.63" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="17.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="17.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="17.50" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="17.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="39.38" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="17.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="17.50" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="20.63" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="39.38" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="23.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="23.75" width="3.17" height="3.17" fill="#E98AA4"/><rect x="26.88" y="23.75" width="3.17" height="3.17" fill="#E98AA4"/><rect x="30.00" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="23.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="26.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="26.88" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="14.38" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="26.88" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="45.63" y="26.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="30.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="30.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="30.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="45.63" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="30.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="33.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="33.13" width="3.17" height="3.17" fill="#E2D8DD"/><rect x="23.75" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="33.13" width="3.17" height="3.17" fill="#E2D8DD"/><rect x="30.00" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="33.13" width="3.17" height="3.17" fill="#E2D8DD"/><rect x="36.25" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="33.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="36.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="36.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="39.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="39.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="48.75" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="51.88" y="39.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="42.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="51.88" y="42.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="45.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="45.63" width="3.17" height="3.17" fill="#E2D8DD"/><rect x="20.63" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="45.63" width="3.17" height="3.17" fill="#E2D8DD"/><rect x="36.25" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="45.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="45.63" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="51.88" y="45.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="23.75" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="26.88" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="30.00" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="33.13" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="45.63" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="48.75" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="17.50" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="33.13" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="36.25" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/></svg>
+      <path class="heart" d="M64 14h2v-2h2v2h2v2h-2v2h-2v-2h-2z" fill="#E98AA4"/>
+      <svg x="64" y="0" width="62" height="62" viewBox="0 0 60 60"><rect x="8.13" y="5.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="5.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="8.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="39.38" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="8.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="8.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="36.25" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="39.38" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="11.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="11.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="14.38" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="14.38" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="20.63" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="23.75" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="26.88" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="30.00" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="33.13" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="36.25" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="14.38" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="42.50" y="14.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="14.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="17.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="17.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="17.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="20.63" width="3.17" height="3.17" fill="#9CCB8E"/><rect x="17.50" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="20.63" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="20.63" width="3.17" height="3.17" fill="#9CCB8E"/><rect x="36.25" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="39.38" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="20.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="20.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="5.00" y="23.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="11.25" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="14.38" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="23.75" width="3.17" height="3.17" fill="#E98AA4"/><rect x="26.88" y="23.75" width="3.17" height="3.17" fill="#E98AA4"/><rect x="30.00" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="23.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="23.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="8.13" y="26.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="26.88" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="14.38" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="26.88" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="26.88" width="3.17" height="3.17" fill="#F4AFC0"/><rect x="42.50" y="26.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="30.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="30.00" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="30.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="45.63" y="30.00" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="33.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="33.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="33.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="45.63" y="33.13" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="33.13" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="36.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="36.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="36.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="45.63" y="36.25" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="48.75" y="36.25" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="39.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="39.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="39.38" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="39.38" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="42.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="23.75" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="42.50" y="42.50" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="45.63" y="42.50" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="45.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="45.63" width="3.17" height="3.17" fill="#E2D8DD"/><rect x="23.75" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="26.88" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="45.63" width="3.17" height="3.17" fill="#E2D8DD"/><rect x="33.13" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="36.25" y="45.63" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="39.38" y="45.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="42.50" y="45.63" width="3.17" height="3.17" fill="#3A2E33"/><rect x="11.25" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="17.50" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="20.63" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="23.75" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="26.88" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="30.00" y="48.75" width="3.17" height="3.17" fill="#FFFFFF"/><rect x="33.13" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="36.25" y="48.75" width="3.17" height="3.17" fill="#3A2E33"/><rect x="14.38" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="17.50" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="26.88" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/><rect x="30.00" y="51.88" width="3.17" height="3.17" fill="#3A2E33"/></svg>
+    </svg>
+    <div class="head-text">
+      <h1>Glen Park <span>Garden</span> Dashboard</h1>
+      <div class="summary" id="summary"><span class="chip">Loading your plants…</span></div>
+      <div class="status-line" id="status"></div>
+    </div>
+  </header>
+  <div class="season" aria-label="Season">
+    <div class="strip" id="strip"></div>
+    <div class="season-line" id="seasonLine"></div>
+  </div>
+  <div class="banner" id="localNote" hidden></div>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="today-h">
+      <div class="panel-head"><h2 id="today-h">Water today</h2><button class="btn primary" id="waterAll" hidden>Water all due</button></div>
+      <div class="list" id="today"><div class="empty">Your watering list will appear here.</div></div>
+    </section>
+    <section class="panel" aria-labelledby="wx-h">
+      <div class="panel-head"><h2 id="wx-h">Glen Park weather</h2><span class="muted" id="wxWhen" style="font-size:.8rem"></span></div>
+      <div class="wx" id="wx"></div>
+      <p class="wxnote" id="wxNote">Rain of a quarter inch or more counts as watering for outdoor plants, and hot days move watering up a day.</p>
+    </section>
+  </div>
+
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="all-h">
+      <div class="panel-head"><h2 id="all-h">All plants <span class="muted" id="count" style="font-size:1rem"></span></h2></div>
+      <div class="grid" id="plants"><div class="empty" style="grid-column:1/-1">No plants yet. Add your first one with the form, and it will show up here with its watering schedule.</div></div>
+    </section>
+    <section class="panel" aria-labelledby="add-h">
+      <h2 id="add-h">Add a plant</h2>
+      <form class="form" id="addForm" autocomplete="off">
+        <label class="f full" for="a-name">Plant name<input id="a-name" required placeholder="e.g. Lavender, Tomato, Monstera"></label>
+        <label class="f full" for="a-spot">Where is it?<input id="a-spot" placeholder="e.g. Front steps, kitchen window"></label>
+        <label class="f" for="a-every">Water every (days)<input id="a-every" type="number" min="1" max="60" value="3" inputmode="numeric"></label>
+        <label class="f" for="a-rain">In the rainy season (days)<input id="a-rain" type="number" min="1" max="90" placeholder="optional" inputmode="numeric"><span class="hint">Nov–Mar. Blank means half as often.</span></label>
+        <label class="f" for="a-out">Rain reaches it?<select id="a-out"><option value="yes">Yes, it's outdoors</option><option value="no">No: indoors or covered</option></select></label>
+        <label class="f" for="a-kind">Icon<select id="a-kind"><option value="leafy">Leafy plant</option><option value="flower">Flowering plant</option><option value="succulent">Succulent</option><option value="veg">Veggie or herb</option></select></label>
+        <label class="f" for="a-last">Last watered<input id="a-last" type="date"></label>
+        <label class="f" for="a-notes">Notes<input id="a-notes" placeholder="e.g. Likes to dry out"></label>
+        <div class="full actions"><button type="submit" class="btn pinkb" id="addBtn">Add plant</button></div>
+      </form>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayISO=()=>iso(new Date());
+const parse=s=>{const [y,m,d]=String(s).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return iso(d)};
+const daysBetween=(a,b)=>Math.round((parse(b)-parse(a))/864e5);
+const RAINY=[11,12,1,2,3];
+const isRainyMonth=s=>RAINY.includes(parse(s).getMonth()+1);
+const fmt=s=>{try{return parse(s).toLocaleDateString(undefined,{month:"short",day:"numeric"})}catch(e){return s}};
+const RAIN_IN=.25,HOT_F=85;
+
+let plants=[],WX=null,store=null,canWrite=false,pendingDel=null,editing=null,busy=new Set();
+
+// ---------- storage: a public Supabase table (no sign-in), with this browser as a fallback ----------
+const CFG=window.GARDEN_CONFIG||{};
+const TABLE="glen_park_plants";
+const LS_KEY="glenpark-plants";
+const localStore={
+  mode:"local",
+  read(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return []}},
+  save(list){try{localStorage.setItem(LS_KEY,JSON.stringify(list));return true}catch(e){return false}},
+  subscribe(cb){this.cb=cb;cb(this.read())},
+  emit(){this.cb&&this.cb(this.read())},
+  async add(body){const l=this.read();l.push({id:"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),...body});if(!this.save(l))throw new Error("storage");this.emit()},
+  async update(id,patch){const l=this.read().map(p=>p.id===id?{...p,...patch}:p);if(!this.save(l))throw new Error("storage");this.emit()},
+  async remove(id){if(!this.save(this.read().filter(p=>p.id!==id)))throw new Error("storage");this.emit()}
+};
+// The page uses camelCase; the table uses snake_case.
+const COLS={every:"water_every",everyRain:"every_rain",lastWatered:"last_watered",snoozeUntil:"snooze_until"};
+const toRow=o=>Object.fromEntries(Object.entries(o).filter(([k])=>k!=="id").map(([k,v])=>[COLS[k]||k,v===undefined?null:v]));
+const fromRow=r=>{const o={};for(const[k,v]of Object.entries(r)){const c=Object.keys(COLS).find(x=>COLS[x]===k);o[c||k]=v}return o};
+function supaStore(){
+  const sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);
+  const ok=({error})=>{if(error)throw error};
+  return{
+    mode:"supabase",
+    subscribe(cb,onErr){
+      let t=null;
+      const load=async()=>{const{data,error}=await sb.from(TABLE).select("*").order("name");if(error){onErr&&onErr(error);return}cb(data.map(fromRow),{metadata:{fromCache:false}})};
+      load();
+      // Live updates: refetch shortly after any change from another device.
+      sb.channel("glen-park").on("postgres_changes",{event:"*",schema:"public",table:TABLE},()=>{clearTimeout(t);t=setTimeout(load,250)}).subscribe();
+      document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
+      this.reload=load;
+    },
+    async add(body){ok(await sb.from(TABLE).insert(toRow(body)));this.reload&&this.reload()},
+    async update(id,patch){ok(await sb.from(TABLE).update({...toRow(patch),updated_at:new Date().toISOString()}).eq("id",id));this.reload&&this.reload()},
+    async remove(id){ok(await sb.from(TABLE).delete().eq("id",id));this.reload&&this.reload()}
+  };
+}
+// Glen Park forecast straight from Open-Meteo (7 days back, 7 ahead), cached for an hour.
+async function loadWeather(){
+  const KEY="glenpark-wx";
+  try{const c=JSON.parse(localStorage.getItem(KEY)||"null");if(c&&Date.now()-Date.parse(c.fetchedAt)<36e5)return c}catch(e){}
+  const url="https://api.open-meteo.com/v1/forecast?latitude=37.7340&longitude=-122.4334&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FLos_Angeles&past_days=7&forecast_days=7";
+  const r=await fetch(url);if(!r.ok)throw new Error("weather "+r.status);
+  const j=(await r.json()).daily;
+  const doc={fetchedAt:new Date().toISOString(),days:j.time.map((d,i)=>({d,hi:j.temperature_2m_max[i],lo:j.temperature_2m_min[i],rain:j.precipitation_sum[i]||0,pop:j.precipitation_probability_max[i]||0,code:j.weather_code[i]}))};
+  try{localStorage.setItem(KEY,JSON.stringify(doc))}catch(e){}
+  return doc;
+}
+
+// ---------- watering logic, with weather ----------
+const wxDay=d=>(WX?.days||[]).find(x=>x.d===d);
+const outdoor=p=>p.outdoor!==false;
+function interval(p,on=todayISO()){
+  const e=Math.max(1,+p.every||3);let iv=isRainyMonth(on)?Math.max(1,+p.everyRain||e*2):e;
+  const w=wxDay(on);if(w&&w.hi>=HOT_F&&outdoor(p))iv=Math.max(1,iv-1);
+  return iv;
+}
+// The most recent watering: by hand, or a good rain for outdoor plants.
+function lastWater(p,upTo=todayISO()){
+  let d=p.lastWatered||null,byRain=false;
+  if(outdoor(p))for(const w of WX?.days||[]){if(w.d<=upTo&&w.rain>=RAIN_IN&&(!d||w.d>d)){d=w.d;byRain=true}}
+  return{d,byRain};
+}
+function status(p){
+  const t=todayISO(),iv=interval(p),lw=lastWater(p);
+  if(!lw.d)return{due:0,cls:"warn",label:"Not watered yet",mood:"thirsty",lw};
+  let due=iv-daysBetween(lw.d,t);
+  if(p.snoozeUntil&&p.snoozeUntil>=t)due=Math.max(due,daysBetween(t,p.snoozeUntil)+1);
+  const rainSoon=outdoor(p)&&[1,2].some(n=>{const w=wxDay(addDays(t,n));return w&&w.rain>=RAIN_IN&&w.pop>=50});
+  if(due<0)return{due,cls:"bad",label:`${-due} day${due===-1?"":"s"} overdue`,mood:"sad",lw,rainSoon};
+  if(due===0)return{due,cls:"warn",label:rainSoon?"Due · rain coming":"Water today",mood:"thirsty",lw,rainSoon};
+  return{due,cls:"ok",label:due===1?"Tomorrow":`In ${due} days`,mood:"happy",lw,rainSoon};
+}
+// Projected due dates for the calendar: from the last watering, step forward by the interval.
+function dueDates(p,from,to){
+  const out=[],lw=lastWater(p);let next=lw.d?addDays(lw.d,interval(p,lw.d)):todayISO();
+  if(next<todayISO())next=todayISO();
+  for(let i=0;i<120&&next<=to;i++){if(next>=from)out.push(next);next=addDays(next,interval(p,next))}
+  return out;
+}
+
+// Little pink pot with a face. mood: happy | thirsty | sad
+function potSVG(mood,kind="leafy"){
+  const sad=mood==="sad",L="var(--leaf)";
+  const tops={
+    leafy:`<path d="M30 25V12" stroke="${L}" stroke-width="3" stroke-linecap="round"/><ellipse cx="21" cy="${sad?17:12}" rx="8.5" ry="4.6" fill="${L}" transform="rotate(${sad?32:-26} 21 ${sad?17:12})"/><ellipse cx="39" cy="${sad?17:12}" rx="8.5" ry="4.6" fill="${L}" transform="rotate(${sad?-32:26} 39 ${sad?17:12})"/>`,
+    flower:`<path d="M30 25V10" stroke="${L}" stroke-width="3" stroke-linecap="round"/><ellipse cx="22" cy="${sad?19:16}" rx="6.5" ry="3.6" fill="${L}" transform="rotate(${sad?30:-20} 22 ${sad?19:16})"/>${[0,72,144,216,288].map(a=>{const r=a*Math.PI/180;return `<circle cx="${(30+4.4*Math.sin(r)).toFixed(1)}" cy="${((sad?11:8)-4.4*Math.cos(r)).toFixed(1)}" r="3.5" fill="var(--pink)"/>`}).join("")}<circle cx="30" cy="${sad?11:8}" r="2.6" fill="#F6D36B"/>`,
+    succulent:`<path d="M30 26Q22 22 23 12Q29 16 30 26ZM30 26Q38 22 37 12Q31 16 30 26ZM30 26Q26 16 30 7Q34 16 30 26Z" fill="${L}"/><path d="M30 26Q18 26 15 18Q24 18 30 26ZM30 26Q42 26 45 18Q36 18 30 26Z" fill="${L}" opacity=".8"/>`,
+    veg:`<path d="M30 25V14M24 25V17M36 25V17" stroke="${L}" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="30" cy="${sad?14:10}" rx="4" ry="6" fill="${L}"/><ellipse cx="23" cy="${sad?16:13}" rx="3.6" ry="5.4" fill="${L}" transform="rotate(-18 23 13)"/><ellipse cx="37" cy="${sad?16:13}" rx="3.6" ry="5.4" fill="${L}" transform="rotate(18 37 13)"/>`
+  };
+  const eyes=mood==="happy"?`<path d="M22.5 39q2-2.4 4 0M33.5 39q2-2.4 4 0" fill="none" stroke="#3A2E33" stroke-width="1.7" stroke-linecap="round"/>`
+    :sad?`<path d="M22.5 38.5q2 2 4 0M33.5 38.5q2 2 4 0" fill="none" stroke="#3A2E33" stroke-width="1.7" stroke-linecap="round"/>`
+    :`<circle cx="24.5" cy="38.5" r="1.8" fill="#3A2E33"/><circle cx="35.5" cy="38.5" r="1.8" fill="#3A2E33"/>`;
+  const mouth=mood==="happy"?`<path d="M27.5 43q2.5 2.4 5 0" fill="none" stroke="#3A2E33" stroke-width="1.5" stroke-linecap="round"/>`
+    :sad?`<path d="M27.5 45q2.5-2.2 5 0" fill="none" stroke="#3A2E33" stroke-width="1.5" stroke-linecap="round"/>`
+    :`<ellipse cx="30" cy="44" rx="1.6" ry="1.3" fill="#3A2E33"/>`;
+  return `<svg class="pot" viewBox="0 0 60 60" aria-hidden="true">${tops[kind]||tops.leafy}
+    <path d="M12 28H48L44 54Q43 57 40 57H20Q17 57 16 54Z" fill="var(--pot)"/><rect x="9" y="23" width="42" height="8" rx="4" fill="var(--pot-rim)"/>
+    ${eyes}${mouth}<ellipse cx="20" cy="43" rx="2.4" ry="1.3" fill="#fff" opacity=".45"/><ellipse cx="40" cy="43" rx="2.4" ry="1.3" fill="#fff" opacity=".45"/>
+    ${mood!=="happy"?`<path d="M50 30q3.6 5 0 7.6q-3.6-2.6 0-7.6z" fill="#8EC5E8"/>`:""}</svg>`;
+}
+// Weather icon from the WMO weather code.
+function wxIcon(code){
+  const sun=`<circle cx="15" cy="15" r="6" fill="#F6C445"/><path d="M15 4v3M15 23v3M4 15h3M23 15h3M7.2 7.2l2 2M20.8 20.8l2 2M7.2 22.8l2-2M20.8 9.2l2-2" stroke="#F6C445" stroke-width="2" stroke-linecap="round"/>`;
+  const cloud=(y=0,c="var(--line)")=>`<path d="M9 ${22+y}Q4 ${22+y} 4 ${17.5+y}Q4 ${13+y} 9 ${13+y}Q10.5 ${8+y} 16 ${8+y}Q21.5 ${8+y} 22.5 ${13+y}Q27 ${13+y} 27 ${17.5+y}Q27 ${22+y} 22 ${22+y}Z" fill="${c}"/>`;
+  const drops=`<path d="M10 25l-1.5 3M16 25l-1.5 3M22 25l-1.5 3" stroke="var(--sky)" stroke-width="2" stroke-linecap="round"/>`;
+  let g;
+  if(code===0||code===1)g=sun;
+  else if(code===2)g=`<g transform="translate(-4 -4) scale(.8)">${sun}</g>${cloud(2)}`;
+  else if(code===45||code===48)g=`${cloud(-2)}<path d="M5 24h20M8 27.5h16" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
+  else if(code>=51&&code<=67||code>=80&&code<=82)g=cloud(-3)+drops;
+  else if(code>=95)g=cloud(-3)+`<path d="M15 20l-3 5h4l-2 5" fill="none" stroke="#F6C445" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  else g=cloud();
+  return `<svg viewBox="0 0 30 30" aria-hidden="true">${g}</svg>`;
+}
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
+const sched=p=>`every ${Math.max(1,+p.every||3)} day${(+p.every||3)===1?"":"s"}${p.everyRain?`, ${p.everyRain} in rainy season`:""}`;
+
+function render(){renderStrip();renderSummary();renderToday();renderWeather();renderPlants()}
+function renderSummary(){
+  const due=plants.filter(p=>status(p).due<=0).length,season=isRainyMonth(todayISO())?"Rainy-season schedule":"Dry-season schedule";
+  $("#summary").innerHTML=plants.length?`<span class="chip"><b>${plants.length}</b> plant${plants.length===1?"":"s"}</span><span class="chip pinkc"><b>${due}</b> to water today</span><span class="chip">${season}</span>`
+    :`<span class="chip pinkc">No plants yet</span><span class="chip">${season}</span>`;
+}
+function renderToday(){
+  const list=plants.map(p=>({p,s:status(p)})).sort((a,b)=>a.s.due-b.s.due||a.p.name.localeCompare(b.p.name));
+  const due=list.filter(x=>x.s.due<=0),soon=list.filter(x=>x.s.due===1);
+  const row=({p,s})=>`<div class="row">${potSVG(s.mood,p.kind)}<div class="grow"><div class="name">${esc(p.name)}</div><div class="sub">${p.spot?esc(p.spot)+" · ":""}${sched(p)}${s.lw.d?` · last ${s.lw.byRain?"rain":"watered"} ${fmt(s.lw.d)}`:""}${s.rainSoon&&s.due<=0?" · rain is forecast, you could wait":""}</div></div>
+    <span class="pill ${s.cls}">${esc(s.label)}</span>
+    ${canWrite?`<div class="actions"><button class="btn primary" data-act="water" data-id="${esc(p.id)}"${busy.has(p.id)?" disabled":""}>Watered</button><button class="btn ghost" data-act="damp" data-id="${esc(p.id)}" title="Check again tomorrow">Still damp</button></div>`:""}</div>`;
+  let html="";
+  if(!plants.length)html=`<div class="empty">Add a plant and it will show up here on the days it needs water.</div>`;
+  else if(!due.length)html=`<div class="allgood">${potSVG("happy","flower")}<div><b>Everyone's happy.</b><div class="sub muted" style="font-size:.86rem">${soon.length?`${soon.length} plant${soon.length===1?"":"s"} will want water tomorrow.`:"Nothing needs water today."}</div></div></div>`;
+  html+=due.map(row).join("");
+  if(due.length&&soon.length)html+=`<div class="sub muted" style="font-size:.84rem;margin-top:4px">Coming up tomorrow</div>`+soon.map(row).join("");
+  $("#today").innerHTML=html;
+  const wa=$("#waterAll");wa.hidden=!(canWrite&&due.length>1);wa.textContent=`Water all ${due.length}`;
+}
+function renderWeather(){
+  const t=todayISO(),days=(WX?.days||[]).filter(d=>d.d>=t).slice(0,7);
+  if(!days.length){$("#wx").innerHTML=`<div class="empty" style="grid-column:1/-1">Couldn't load the forecast right now.</div>`;$("#wxWhen").textContent="";return}
+  $("#wx").innerHTML=days.map(d=>`<div class="wxd${d.d===t?" today":""}"><span>${d.d===t?"Today":parse(d.d).toLocaleDateString(undefined,{weekday:"short"})}</span>${wxIcon(d.code)}<b>${Math.round(d.hi)}°</b><span>${Math.round(d.lo)}°</span><span class="rain">${d.rain>=.01?d.rain.toFixed(2)+'"':"&nbsp;"}</span></div>`).join("");
+  $("#wxWhen").textContent=WX.fetchedAt?`Updated ${new Date(WX.fetchedAt).toLocaleDateString(undefined,{month:"short",day:"numeric"})}`:"";
+  const past=(WX.days||[]).filter(d=>d.d<t&&d.d>=addDays(t,-3)&&d.rain>=RAIN_IN),hot=days.find(d=>d.hi>=HOT_F);
+  $("#wxNote").textContent=past.length?`It rained ${past.map(d=>`${d.rain.toFixed(2)}" on ${fmt(d.d)}`).join(" and ")}, so outdoor plants count as watered.`
+    :hot?`Hot day on ${fmt(hot.d)} (${Math.round(hot.hi)}°): outdoor plants will want water a day sooner.`
+    :"Rain of a quarter inch or more counts as watering for outdoor plants, and hot days move watering up a day.";
+}
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const SEASONS={
+  wet:{name:"Rainy season",span:"Nov–Mar",tip:"Rain does most of the work. Check that pots drain freely, and skip watering after a good storm."},
+  shoulder:{name:"Shoulder season",span:"Apr–May, Oct",tip:"Rain is unreliable. Poke a finger 2 inches into the soil before watering."},
+  dry:{name:"Dry season",span:"Jun–Sep",tip:"Pots in sun dry out fast. Water deeply in the morning until it runs out the bottom."}
+};
+const seasonOf=m=>[11,12,1,2,3].includes(m)?"wet":[6,7,8,9].includes(m)?"dry":"shoulder";
+function renderStrip(){
+  const m=new Date().getMonth()+1;
+  $("#strip").innerHTML=MONTHS.map((n,i)=>`<div class="${seasonOf(i+1)}${i+1===m?" now":""}" title="${SEASONS[seasonOf(i+1)].name}">${n}</div>`).join("");
+  const se=SEASONS[seasonOf(m)];
+  $("#seasonLine").innerHTML=`<strong>${esc(se.name)}</strong><span class="muted">${esc(se.span)}</span><span>${esc(se.tip)}</span>`;
+}
+function renderPlants(){
+  $("#count").textContent=plants.length?`(${plants.length})`:"";
+  if(!plants.length){$("#plants").innerHTML=`<div class="empty" style="grid-column:1/-1">No plants yet. Add your first one with the form, and it will show up here with its watering schedule.</div>`;return}
+  $("#plants").innerHTML=[...plants].sort((a,b)=>a.name.localeCompare(b.name)).map(p=>{const s=status(p);
+    if(editing===p.id)return editCard(p);
+    const hist=p.history||[];
+    return `<article class="card"><div class="card-top">${potSVG(s.mood,p.kind)}<div style="min-width:0"><h3>${esc(p.name)}</h3><span class="pill ${s.cls}">${esc(s.label)}</span></div></div>
+      <dl class="kv"><dt>Where</dt><dd>${esc(p.spot||"—")}${outdoor(p)?" · outdoors":" · indoors or covered"}</dd><dt>Water</dt><dd>${sched(p)}</dd><dt>Last</dt><dd>${p.lastWatered?fmt(p.lastWatered):"not yet"}${s.lw.byRain?` (rain ${fmt(s.lw.d)})`:""}</dd></dl>
+      ${p.notes?`<p class="notes">${esc(p.notes)}</p>`:""}
+      <div class="dots" title="Waterings in the last 14 days">${[...Array(14)].map((_,i)=>{const d=addDays(todayISO(),i-13);return `<i class="${hist.includes(d)?"on":""}"></i>`}).join("")}<span>&nbsp;2 weeks</span></div>
+      ${canWrite?`<div class="actions"><button class="btn primary" data-act="water" data-id="${esc(p.id)}"${busy.has(p.id)?" disabled":""}>Watered</button><button class="btn ghost" data-act="edit" data-id="${esc(p.id)}">Edit</button><button class="btn ghost danger" data-act="del" data-id="${esc(p.id)}">${pendingDel===p.id?"Tap again to remove":"Remove"}</button></div>`:""}</article>`}).join("");
+}
+function editCard(p){const id=esc(p.id);return `<article class="card"><form class="form" data-edit="${id}" autocomplete="off">
+  <label class="f full" for="e-name-${id}">Plant name<input id="e-name-${id}" name="name" required value="${esc(p.name)}"></label>
+  <label class="f full" for="e-spot-${id}">Where is it?<input id="e-spot-${id}" name="spot" value="${esc(p.spot||"")}"></label>
+  <label class="f" for="e-every-${id}">Water every (days)<input id="e-every-${id}" name="every" type="number" min="1" max="60" value="${esc(p.every||3)}"></label>
+  <label class="f" for="e-rain-${id}">Rainy season (days)<input id="e-rain-${id}" name="everyRain" type="number" min="1" max="90" placeholder="optional" value="${esc(p.everyRain||"")}"></label>
+  <label class="f" for="e-out-${id}">Rain reaches it?<select id="e-out-${id}" name="outdoor"><option value="yes"${outdoor(p)?" selected":""}>Yes, it's outdoors</option><option value="no"${outdoor(p)?"":" selected"}>No: indoors or covered</option></select></label>
+  <label class="f" for="e-kind-${id}">Icon<select id="e-kind-${id}" name="kind">${[["leafy","Leafy plant"],["flower","Flowering plant"],["succulent","Succulent"],["veg","Veggie or herb"]].map(([v,l])=>`<option value="${v}"${(p.kind||"leafy")===v?" selected":""}>${l}</option>`).join("")}</select></label>
+  <label class="f" for="e-last-${id}">Last watered<input id="e-last-${id}" name="lastWatered" type="date" value="${esc(p.lastWatered||"")}"></label>
+  <label class="f" for="e-notes-${id}">Notes<input id="e-notes-${id}" name="notes" value="${esc(p.notes||"")}"></label>
+  <div class="full actions"><button type="submit" class="btn pinkb">Save</button><button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></form></article>`}
+
+const writeMsg=e=>e&&/permission|denied|violates|check constraint/i.test(e.code||e.message||"")?"The garden wouldn't accept that change. Check the plant details and try again.":e&&/storage/.test(e.message||"")?"This browser won't let the page save. Turn off private browsing and try again.":"Couldn't save that. Check your connection and try again.";
+async function water(id){
+  const p=plants.find(x=>x.id===id);if(!p||busy.has(id))return;busy.add(id);render();
+  const t=todayISO(),history=[t,...(p.history||[]).filter(d=>d!==t)].slice(0,90);
+  try{await store.update(id,{lastWatered:t,history,snoozeUntil:null});toast(`Watered ${p.name}`)}catch(e){toast(writeMsg(e))}finally{busy.delete(id);render()}
+}
+async function damp(id){const p=plants.find(x=>x.id===id);if(!p)return;
+  try{await store.update(id,{snoozeUntil:addDays(todayISO(),1)});toast(`OK, ${p.name} will come back up tomorrow`)}catch(e){toast(writeMsg(e))}}
+
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-act]");if(!b||!store)return;const id=b.dataset.id;
+  if(b.dataset.act==="water")water(id);
+  else if(b.dataset.act==="damp")damp(id);
+  else if(b.dataset.act==="edit"){editing=id;pendingDel=null;renderPlants();document.getElementById("e-name-"+id)?.focus()}
+  else if(b.dataset.act==="cancel"){editing=null;renderPlants()}
+  else if(b.dataset.act==="del"){
+    if(pendingDel!==id){pendingDel=id;renderPlants();setTimeout(()=>{if(pendingDel===id){pendingDel=null;renderPlants()}},4000);return}
+    pendingDel=null;const p=plants.find(x=>x.id===id);try{await store.remove(id);toast(`Removed ${p?.name||"plant"}`)}catch(err){toast(writeMsg(err))}
+  }
+});
+$("#waterAll").addEventListener("click",async()=>{for(const id of plants.filter(p=>status(p).due<=0).map(p=>p.id))await water(id)});
+$("#addForm").addEventListener("submit",async e=>{
+  e.preventDefault();if(!store||!canWrite)return;
+  const name=$("#a-name").value.trim();if(!name){$("#a-name").focus();return}
+  const body={name,spot:$("#a-spot").value.trim(),every:Math.max(1,+$("#a-every").value||3),outdoor:$("#a-out").value!=="no",kind:$("#a-kind").value,notes:$("#a-notes").value.trim(),added:todayISO(),history:[]};
+  const rain=+$("#a-rain").value;if(rain>0)body.everyRain=rain;
+  const last=$("#a-last").value;if(last){body.lastWatered=last;body.history=[last]}
+  $("#addBtn").disabled=true;
+  try{await store.add(body);toast(`Added ${name}`);["a-name","a-spot","a-rain","a-notes","a-last"].forEach(k=>$("#"+k).value="");$("#a-name").focus()}
+  catch(err){toast(writeMsg(err))}finally{$("#addBtn").disabled=false}
+});
+document.addEventListener("submit",async e=>{
+  const f=e.target.closest("form[data-edit]");if(!f)return;e.preventDefault();
+  const id=f.dataset.edit,v=n=>f.elements[n].value.trim();
+  const body={name:v("name")||"Plant",spot:v("spot"),every:Math.max(1,+v("every")||3),everyRain:+v("everyRain")>0?+v("everyRain"):null,outdoor:v("outdoor")!=="no",lastWatered:v("lastWatered")||null,kind:v("kind"),notes:v("notes")};
+  try{await store.update(id,body);editing=null;toast("Saved")}catch(err){toast(writeMsg(err))}
+});
+
+(async()=>{
+  render();
+  const setStatus=s=>$("#status").textContent=s;
+  loadWeather().then(w=>{WX=w;render()}).catch(()=>{});
+  setInterval(()=>loadWeather().then(w=>{WX=w;render()}).catch(()=>{}),60*60*1000);
+  setInterval(render,10*60*1000);
+  if(!CFG.supabaseUrl||!CFG.supabaseKey||!window.supabase){
+    store=localStore;canWrite=true;
+    const n=$("#localNote");n.hidden=false;
+    n.innerHTML=`<b>Saving on this device only.</b> The shared garden isn't connected yet, so plants are saved in this browser for now.`;
+    store.subscribe(list=>{plants=list.filter(p=>p.name);render()});setStatus("Saved in this browser");return;
+  }
+  store=supaStore();canWrite=true;setStatus("Loading the garden…");
+  const timer=setTimeout(()=>setStatus("The garden is waking up. This can take a few seconds after a quiet week."),6000);
+  store.subscribe((list)=>{
+    clearTimeout(timer);plants=list.filter(p=>p.name);
+    setStatus(`Updated ${new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}`);render();
+  },err=>{clearTimeout(timer);setStatus("Couldn't load the garden. Try again in a minute.");console.error(err)});
+})();
+</script>
+
+</body>
+</html>

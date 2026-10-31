@@ -1,0 +1,24 @@
+name: Daily plant backup
+on:
+  schedule:
+    - cron: "30 15 * * *"   # 8:30am Pacific (7:30 in winter)
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the plant list
+        run: |
+          URL=$(grep -o 'supabaseUrl:"[^"]*"' config.js | cut -d'"' -f2)
+          KEY=$(grep -o 'supabaseKey:"[^"]*"' config.js | cut -d'"' -f2)
+          curl -sf "$URL/rest/v1/glen_park_plants?select=*&order=name" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" | python3 -m json.tool > backup/plants.json
+      - name: Save it if anything changed
+        run: |
+          git config user.name "garden-backup"
+          git config user.email "garden-backup@users.noreply.github.com"
+          git add backup/plants.json
+          git diff --cached --quiet || git commit -m "Plant backup $(date -u +%F)"
+          git push
