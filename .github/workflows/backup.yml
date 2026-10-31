@@ -14,6 +14,7 @@ jobs:
         run: |
           URL=$(grep -o 'supabaseUrl:"[^"]*"' config.js | cut -d'"' -f2)
           KEY=$(grep -o 'supabaseKey:"[^"]*"' config.js | cut -d'"' -f2)
+          mkdir -p backup
           curl -sf "$URL/rest/v1/glen_park_plants?select=*&order=name" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" | python3 -m json.tool > backup/plants.json
       - name: Save it if anything changed
         run: |
